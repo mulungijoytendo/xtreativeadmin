@@ -88,6 +88,7 @@ export default function LoanReport({ isGeneratingPDF, searchTerm, onTabChange })
     useContext(LoansContext);
   const [activeTab, setActiveTab] = useState("applications");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
 
   // Notify parent of tab change
   const handleTabChange = (tabKey) => {
@@ -103,7 +104,7 @@ export default function LoanReport({ isGeneratingPDF, searchTerm, onTabChange })
     const term = searchTerm.toLowerCase();
     return loans.filter(
       (loan) =>
-        loan.id.toLowerCase().includes(term) ||
+        loan.id.toString().toLowerCase().includes(term) ||
         loan.vendor_username.toLowerCase().includes(term) ||
         loan.purpose.toLowerCase().includes(term) ||
         loan.status.toLowerCase().includes(term) ||
@@ -116,9 +117,9 @@ export default function LoanReport({ isGeneratingPDF, searchTerm, onTabChange })
     const term = searchTerm.toLowerCase();
     return repaymentBlocks.filter(
       (block) =>
-        block.id.toLowerCase().includes(term) ||
+        block.id.toString().toLowerCase().includes(term) ||
         block.vendor_username.toLowerCase().includes(term) ||
-        (block.loanId || block.applicationId)?.toLowerCase().includes(term)
+        (block.loanId || block.applicationId)?.toString().toLowerCase().includes(term)
     );
   }, [repaymentBlocks, searchTerm]);
 
@@ -127,9 +128,9 @@ export default function LoanReport({ isGeneratingPDF, searchTerm, onTabChange })
     const term = searchTerm.toLowerCase();
     return repaymentHistory.filter(
       (history) =>
-        history.id.toLowerCase().includes(term) ||
+        history.id.toString().toLowerCase().includes(term) ||
         history.vendor_username.toLowerCase().includes(term) ||
-        (history.loanId || history.applicationId)?.toLowerCase().includes(term)
+        (history.loanId || history.applicationId)?.toString().toLowerCase().includes(term)
     );
   }, [repaymentHistory, searchTerm]);
 
@@ -242,7 +243,7 @@ export default function LoanReport({ isGeneratingPDF, searchTerm, onTabChange })
           {TABS.map((tab) => (
             <div
               key={tab.key}
-              onClick={() => handleTabChange(tab.key)} // Use handleTabChange to notify parent
+              onClick={() => handleTabChange(tab.key)}
               className={`flex-1 text-center py-2 cursor-pointer text-[11px] ${
                 activeTab === tab.key
                   ? "bg-white border-t border-l border-r text-gray-800"

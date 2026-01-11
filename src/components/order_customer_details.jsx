@@ -1,3 +1,4 @@
+// OrderRightSection.js
 import React, { useContext } from "react";
 import mtnLogo from "../assets/mtn.jpg";
 import airtelLogo from "../assets/airrtel.jpg";
@@ -73,7 +74,7 @@ function PaymentInformationCard({ order }) {
   // Use PaymentContext to obtain paymentMethods array.
   const { paymentMethods } = useContext(PaymentContext);
   
-  // Lookup the payment method that matches the order’s customer ID.
+  // Lookup the payment method that matches the order's customer ID.
   const paymentMethodForOrder =
     paymentMethods.find(
       (pm) => Number(pm.customer) === Number(order.customer)
