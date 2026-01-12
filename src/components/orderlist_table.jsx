@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FaEye, FaCar } from "react-icons/fa";
 import { UserContext } from "../context/usercontext";
 import { OrdersContext } from "../context/orderscontext";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL, authFetch } from "../api";
 
 // Map statuses to bg/text colors using yellow ↔ orange ↔ green blends
 const getOrderStatusClasses = (status) => {

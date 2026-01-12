@@ -9,6 +9,7 @@ import Declined from "../modals/declined";
 import DeclineError from "../modals/declinedError";
 import DeleteVendor from "../modals/deleteVendor"; // Assumed to be adapted for onDeleteConfirm
 import { FaTrash } from "react-icons/fa";
+import { authFetch } from "../api";
 // import { toast } from "react-toastify";
 
 // CustomCheckbox component using Tailwind peer classes
@@ -83,11 +84,7 @@ export default function VendorsList() {
   // Fetch vendors from API
   const fetchVendors = () => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/vendors/list/`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error fetching vendors");
-        return res.json();
-      })
+    authFetch("/vendors/list/")
       .then((data) => {
         // sort newest first by id (highest id = newest)
         const sorted = [...data].sort((a, b) => b.id - a.id);
@@ -177,12 +174,8 @@ export default function VendorsList() {
     setShowDeleteModal(false);
 
     // Call the delete API
-    fetch(`${API_BASE_URL}/vendors/${vendor.id}`, {
-      method: "DELETE",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Delete failed");
-
+    authFetch(`/vendors/${vendor.id}`, { method: "DELETE" })
+      .then(() => {
         // If deletion is successful, add the vendor back
         // (This simulates re-adding the vendor even when the delete API returns a success.)
         setVendors((prev) => {

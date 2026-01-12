@@ -1,5 +1,6 @@
 // ProductsContext.js
 import React, { createContext, useState, useEffect } from "react";
+import { authFetch } from "../api";
 
 export const ProductsContext = createContext();
 
@@ -12,11 +13,7 @@ export const AllProductsProvider = ({ children }) => {
     const fetchProducts = async () => {
       try {
         setLoadingProducts(true);
-        const res = await fetch(`${API_BASE_URL}/products/listing/`);
-        if (!res.ok) {
-          throw new Error(`Error: ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await authFetch("/products/listing/");
         setProducts(data);
       } catch (err) {
         setErrorProducts(err.message);

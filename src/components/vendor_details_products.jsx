@@ -6,6 +6,7 @@ import {
   FaFilter,
 } from "react-icons/fa";
 import defaultImg from "../assets/default.png";
+import { authFetch } from "../api";
 
 // Helper function: parse "dd/mm/yyyy" to a Date object
 function parseDate(dateStr) {
@@ -60,13 +61,7 @@ export default function VendorDetailsProducts({ vendor }) {
   // Fetch the public products list from API on component mount
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/products/listing/`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Error fetching products");
-        }
-        return response.json();
-      })
+    authFetch("/products/listing/")
       .then((data) => {
         // If a vendor is provided, filter products by vendor id.
         // The API returns vendor id as a number.

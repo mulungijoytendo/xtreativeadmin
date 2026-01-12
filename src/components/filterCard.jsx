@@ -6,7 +6,7 @@ import { IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { FaStar } from "react-icons/fa";
 import ProductSection from "./product_section";
 import Loader from "../pages/Loader";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL, authFetch } from "../api";
 
 const API_URL = API_BASE_URL + "/products/listing/";
 
@@ -46,9 +46,7 @@ const FilterAndCard = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error("Failed to fetch products");
-        const data = await res.json();
+        const data = await authFetch("/products/listing/");
         setAllProducts(data);
         setLoadingProducts(false);
       } catch (err) {

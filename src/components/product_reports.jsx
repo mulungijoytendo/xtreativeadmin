@@ -6,6 +6,7 @@ import { OrdersContext } from "../context/orderscontext";
 import Loader from "../pages/Loader";
 import StatsCard from "../components/Cards";
 import OrderHistory from "../components/product_Order_History";
+import { authFetch } from "../api";
 
 export default function ProductReports({ disableReviewsPagination = false, isGeneratingPDF = false }) {
   const [activeTab, setActiveTab] = useState("products");
@@ -29,8 +30,7 @@ export default function ProductReports({ disableReviewsPagination = false, isGen
   useEffect(() => {
     if (!selectedVendorId) return setVendor(null);
     let isMounted = true;
-    fetch(`${API_BASE_URL}/vendors/${selectedVendorId}/details/`)
-      .then(res => { if (!res.ok) throw Error(); return res.json(); })
+    authFetch(`/vendors/${selectedVendorId}/details/`)
       .then(data => isMounted && setVendor(data))
       .catch(() => isMounted && setVendorError("Unable to load vendor details"));
     return () => { isMounted = false; };

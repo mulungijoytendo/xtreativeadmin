@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Loader from "../pages/Loader";
 import DeleteCustomer from "../modals/deleteCustomer";
 import { FaTrash, FaToggleOn, FaToggleOff } from "react-icons/fa";
+import { authFetch } from "../api";
 
 // CustomCheckbox component using Tailwind peer classes
 const CustomCheckbox = ({ checked, onChange }) => (
@@ -65,17 +66,10 @@ export default function CustomersList() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Base API URL for activation/deactivation endpoints
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-xtreative.onrender.com';
-
   // Fetch logic extracted so we can re-use on Refresh
   const fetchCustomers = () => {
     setLoading(true);
-    fetch(`${API_BASE_URL}/customers/list/`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error fetching Customers");
-        return res.json();
-      })
+    authFetch("/customers/list/")
       .then((data) => {
         // sort newest first by id (highest id = newest)
         const sorted = [...data].sort((a, b) => b.id - a.id);
@@ -154,33 +148,15 @@ export default function CustomersList() {
     const customer = Customers.find((cust) => cust.id === id);
     if (!customer) return;
 
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      alert("Authentication token missing. Please log in again.");
-      return;
-    }
-
     const statusLower = customer.status.toLowerCase();
     const endpoint =
       statusLower === "active"
-        ? `${API_BASE_URL}/customers/${id}/deactivate/`
-        : `${API_BASE_URL}/customers/${id}/activate/`;
+        ? `/customers/${id}/deactivate/`
+        : `/customers/${id}/activate/`;
 
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        fetchCustomers();
-      } else {
-        const errorData = await response.json();
-        alert("Toggle failed: " + (errorData.detail || "Unknown error"));
-      }
+      await authFetch(endpoint, { method: "POST" });
+      fetchCustomers();
     } catch (error) {
       console.error("Toggle activation error:", error);
       alert("An error occurred while updating the status.");
