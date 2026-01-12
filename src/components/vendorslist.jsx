@@ -83,7 +83,7 @@ export default function VendorsList() {
   // Fetch vendors from API
   const fetchVendors = () => {
     setLoading(true);
-    fetch("https://api-xtreative.onrender.com/vendors/list/")
+    fetch(`${API_BASE_URL}/vendors/list/`)
       .then((res) => {
         if (!res.ok) throw new Error("Error fetching vendors");
         return res.json();
@@ -177,7 +177,7 @@ export default function VendorsList() {
     setShowDeleteModal(false);
 
     // Call the delete API
-    fetch(`https://api-xtreative.onrender.com/vendors/${vendor.id}`, {
+    fetch(`${API_BASE_URL}/vendors/${vendor.id}`, {
       method: "DELETE",
     })
       .then((res) => {

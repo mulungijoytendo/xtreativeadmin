@@ -6,8 +6,9 @@ import { IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { FaStar } from "react-icons/fa";
 import ProductSection from "./product_section";
 import Loader from "../pages/Loader";
+import { API_BASE_URL } from "../config";
 
-const API_URL = "https://api-xtreative.onrender.com/products/listing/";
+const API_URL = API_BASE_URL + "/products/listing/";
 
 const FilterAndCard = () => {
   // Toggle states for filter sections
@@ -39,387 +40,299 @@ const FilterAndCard = () => {
   // Fetched products + loading/error
   const [allProducts, setAllProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
+  const [errorProducts, setErrorProducts] = useState(null);
 
-  // Snapshot of applied filters
-  const [appliedFilters, setAppliedFilters] = useState({
-    searchTerm: "",
-    minPrice: 0,
-    maxPrice: 1500,
-    selectedCategories: ["All Categories"],
-    selectedRating: null,
-    selectedSizes: ["All Sizes"],
-  });
-
-  // Fetch products on mount
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
-      setLoadingProducts(true);
       try {
         const res = await fetch(API_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error("Failed to fetch products");
         const data = await res.json();
-
-        // Sort newest first
-        data.sort((a, b) => b.id - a.id);
         setAllProducts(data);
-
-        // compute price bounds
-        const prices = data.map((p) => Number(p.price));
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        setMinPrice(min);
-        setMaxPrice(max);
-        setSelectedPriceRange([min, max]);
-        setSelectedPriceOption("all");
-        setAppliedFilters((prev) => ({
-          ...prev,
-          minPrice: min,
-          maxPrice: max,
-        }));
-
-        setFetchError(null);
+        setLoadingProducts(false);
       } catch (err) {
         console.error(err);
-        setFetchError("Failed to load products.");
-      } finally {
+        setErrorProducts(err.message);
         setLoadingProducts(false);
       }
     };
     fetchProducts();
   }, []);
 
-  // Dynamic filter lists
-  const dynamicCategoryList = useMemo(
-    () => [
-      "All Categories",
-      ...Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean))),
-    ],
-    [allProducts]
-  );
-
-  const dynamicPriceOptions = useMemo(() => {
-    if (minPrice === maxPrice) {
-      return [
-        {
-          label: `UGX ${minPrice} - UGX ${maxPrice}`,
-          value: `${minPrice}-${maxPrice}`,
-          count: allProducts.length,
-        },
-      ];
-    }
-    const ranges = 4;
-    const step = (maxPrice - minPrice) / ranges;
-    const opts = Array.from({ length: ranges }, (_, i) => {
-      const low = Math.round(minPrice + i * step);
-      const high =
-        i === ranges - 1 ? maxPrice : Math.round(minPrice + (i + 1) * step);
-      const cnt = allProducts.filter(
-        (p) =>
-          Number(p.price) >= low &&
-          Number(p.price) < (i === ranges - 1 ? high + 1 : high)
-      ).length;
-      return { label: `UGX ${low} - UGX ${high}`, value: `${low}-${high}`, count: cnt };
-    });
-    return [{ label: "All Price", value: "all", count: allProducts.length }, ...opts];
-  }, [minPrice, maxPrice, allProducts]);
-
-  const dynamicSizeOptions = useMemo(() => {
-    const counts = allProducts.reduce((acc, p) => {
-      if (p.size) acc[p.size] = (acc[p.size] || 0) + 1;
-      return acc;
-    }, {});
-    const order = ["S", "M", "L", "XL", "XXL", "Others"];
-    const ordered = order.filter((s) => counts[s]).map((s) => `${s} (${counts[s]})`);
-    const extra = Object.keys(counts)
-      .filter((s) => !order.includes(s))
-      .map((s) => `${s} (${counts[s]})`);
-    return ["All Sizes", ...ordered, ...extra];
+  // Derived state: unique categories and sizes
+  const uniqueCategories = useMemo(() => {
+    const categories = allProducts.map((p) => p.category);
+    return ["All Categories", ...new Set(categories)];
   }, [allProducts]);
 
-  // Handlers
-  const handleCategoryChange = (cat, checked) => {
-    if (cat === "All Categories") {
-      setSelectedCategories(checked ? ["All Categories"] : []);
-    } else {
-      let sel = selectedCategories.filter((c) => c !== "All Categories");
-      if (checked) sel.push(cat);
-      else sel = sel.filter((c) => c !== cat);
-      if (!sel.length) sel = ["All Categories"];
-      setSelectedCategories(sel);
-    }
-  };
+  const uniqueSizes = useMemo(() => {
+    const sizes = allProducts.flatMap((p) => p.sizes || []);
+    return ["All Sizes", ...new Set(sizes)];
+  }, [allProducts]);
 
-  const handleSizeChange = (szOpt, checked) => {
-    const sz = szOpt.split(" ")[0];
-    if (sz === "All") {
-      setSelectedSizes(checked ? ["All Sizes"] : []);
-    } else {
-      let sel = selectedSizes.filter((s) => s !== "All Sizes");
-      if (checked) sel.push(sz);
-      else sel = sel.filter((s) => s !== sz);
-      if (!sel.length) sel = ["All Sizes"];
-      setSelectedSizes(sel);
+  // Price range calculation
+  useEffect(() => {
+    if (allProducts.length > 0) {
+      const prices = allProducts.map((p) => p.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      setMinPrice(min);
+      setMaxPrice(max);
+      setSelectedPriceRange([min, max]);
     }
-  };
+  }, [allProducts]);
 
-  const handlePriceOptionChange = (val) => {
-    if (selectedPriceOption === val) {
-      setSelectedPriceOption("all");
-      setSelectedPriceRange([minPrice, maxPrice]);
-    } else {
-      setSelectedPriceOption(val);
-      if (val !== "all") {
-        const [lo, hi] = val.split("-").map(Number);
-        setSelectedPriceRange([lo, hi]);
-      } else {
-        setSelectedPriceRange([minPrice, maxPrice]);
+  // Filtered products
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter((product) => {
+      // Search term
+      if (searchTerm && !product.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
       }
-    }
-  };
 
-  const handleSliderChange = (_, range) => {
-    setSelectedPriceRange(range);
-    setSelectedPriceOption("custom");
-  };
+      // Category
+      if (!selectedCategories.includes("All Categories") && !selectedCategories.includes(product.category)) {
+        return false;
+      }
 
-  const handleApplyFilters = () => {
-    setAppliedFilters({
-      searchTerm,
-      minPrice: selectedPriceRange[0],
-      maxPrice: selectedPriceRange[1],
-      selectedCategories,
-      selectedRating,
-      selectedSizes,
+      // Size
+      if (!selectedSizes.includes("All Sizes")) {
+        const hasSize = selectedSizes.some((size) => product.sizes?.includes(size));
+        if (!hasSize) return false;
+      }
+
+      // Price range
+      if (product.price < selectedPriceRange[0] || product.price > selectedPriceRange[1]) {
+        return false;
+      }
+
+      // Rating
+      if (selectedRating && product.rating < selectedRating) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [allProducts, searchTerm, selectedCategories, selectedSizes, selectedPriceRange, selectedRating]);
+
+  // Handlers
+  const handleCategoryChange = (category) => {
+    setSelectedCategories((prev) => {
+      if (category === "All Categories") {
+        return ["All Categories"];
+      }
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      const arr = Array.from(newSet);
+      if (arr.includes("All Categories")) {
+        return ["All Categories"];
+      }
+      return arr;
     });
   };
 
-  // Debounced search
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setAppliedFilters((prev) => ({ ...prev, searchTerm }));
-    }, 500);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") handleApplyFilters();
+  const handleSizeChange = (size) => {
+    setSelectedSizes((prev) => {
+      if (size === "All Sizes") {
+        return ["All Sizes"];
+      }
+      const newSet = new Set(prev);
+      if (newSet.has(size)) {
+        newSet.delete(size);
+      } else {
+        newSet.add(size);
+      }
+      const arr = Array.from(newSet);
+      if (arr.includes("All Sizes")) {
+        return ["All Sizes"];
+      }
+      return arr;
+    });
   };
 
-  return (
-    <div className="flex w-full gap-4">
-      {/* Left Filter Panel */}
-      <div className="w-1/4 p-4">
-        <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="block w-full p-1 pl-8 pr-4 text-[11px] border border-gray-300 rounded focus:outline-none focus:border-black"
-              placeholder="Search..."
-            />
-            <svg
-              className="absolute left-2 top-2 w-2.5 h-2.5 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M12.9 14.32a8 8 0 111.414-1.414l3.387 3.386a1 1 0 01-1.414 1.415l-3.387-3.387zM8 14a6 6 0 100-12 6 6 0 000 12z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
+  const handlePriceChange = (event, newValue) => {
+    setSelectedPriceRange(newValue);
+  };
 
-          {/* Categories */}
-          <div>
-            <button
-              onClick={() => setOpenCategory(!openCategory)}
-              className="w-full flex items-center justify-between bg-blue-50 p-2 rounded text-[11px] text-gray-700"
-            >
-              Categories {openCategory ? <IoIosArrowUp /> : <IoIosArrowDown />}
-            </button>
-            {openCategory && (
-              <div className="mt-2 space-y-2 text-[11px] text-gray-700">
-                {dynamicCategoryList.map((cat) => (
-                  <label key={cat} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox accent-[#f9622c] w-2.5 h-2.5"
-                      checked={selectedCategories.includes(cat)}
-                      onChange={(e) => handleCategoryChange(cat, e.target.checked)}
-                    />
-                    <span>{cat}</span>
-                  </label>
+  const handlePriceOptionChange = (option) => {
+    setSelectedPriceOption(option);
+    if (option === "all") {
+      setSelectedPriceRange([minPrice, maxPrice]);
+    } else if (option === "under50") {
+      setSelectedPriceRange([minPrice, 50]);
+    } else if (option === "50to100") {
+      setSelectedPriceRange([50, 100]);
+    } else if (option === "over100") {
+      setSelectedPriceRange([100, maxPrice]);
+    }
+  };
+
+  const handleRatingChange = (rating) => {
+    setSelectedRating(rating);
+  };
+
+  // Render
+  return (
+    <div className="flex flex-col md:flex-row gap-6 p-4">
+      {/* Filters */}
+      <div className="w-full md:w-1/4 bg-white rounded-lg shadow p-4">
+        {/* Search */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Category */}
+        <div className="mb-4">
+          <button
+            onClick={() => setOpenCategory(!openCategory)}
+            className="w-full flex justify-between items-center p-2 bg-gray-100 rounded"
+          >
+            <span>Category</span>
+            {openCategory ? <IoIosArrowUp /> : <IoIosArrowDown />}
+          </button>
+          {openCategory && (
+            <div className="mt-2 space-y-2">
+              {uniqueCategories.map((category) => (
+                <label key={category} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(category)}
+                    onChange={() => handleCategoryChange(category)}
+                    className="mr-2"
+                  />
+                  {category}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="mb-4">
+          <button
+            onClick={() => setOpenPrice(!openPrice)}
+            className="w-full flex justify-between items-center p-2 bg-gray-100 rounded"
+          >
+            <span>Price</span>
+            {openPrice ? <IoIosArrowUp /> : <IoIosArrowDown />}
+          </button>
+          {openPrice && (
+            <div className="mt-2">
+              <div className="flex space-x-2 mb-2">
+                {[
+                  { label: "All", value: "all" },
+                  { label: "Under $50", value: "under50" },
+                  { label: "$50 - $100", value: "50to100" },
+                  { label: "Over $100", value: "over100" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handlePriceOptionChange(option.value)}
+                    className={`px-2 py-1 rounded text-sm ${
+                      selectedPriceOption === option.value ? "bg-blue-500 text-white" : "bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Price Filter */}
-          <div>
-            <button
-              onClick={() => setOpenPrice(!openPrice)}
-              className="w-full flex items-center justify-between bg-blue-50 p-2 rounded text-[11px] text-gray-600"
-            >
-              Product Price {openPrice ? <IoIosArrowUp /> : <IoIosArrowDown />}
-            </button>
-            {openPrice && (
-              <div className="mt-2 space-y-2 text-[10px] text-gray-700">
-                {dynamicPriceOptions.map(({ label, value, count }) => (
-                  <label key={value} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox accent-[#f9622c] w-2.5 h-2.5"
-                      checked={selectedPriceOption === value}
-                      onChange={() => handlePriceOptionChange(value)}
-                    />
-                    <span>{label} ({count})</span>
-                  </label>
-                ))}
-                <p className="text-[11px] font-medium text-gray-700 mb-1">
-                  Custom Price Range:
-                </p>
+              <div className="px-2">
                 <Slider
                   value={selectedPriceRange}
-                  onChange={handleSliderChange}
+                  onChange={handlePriceChange}
+                  valueLabelDisplay="auto"
                   min={minPrice}
                   max={maxPrice}
-                  step={50}
-                  valueLabelDisplay="auto"
-                  sx={{
-                    color: "#f9622c",
-                    height: 4,
-                    "& .MuiSlider-thumb": { width: 14, height: 14 },
-                    "& .MuiSlider-track": { height: 4 },
-                    "& .MuiSlider-rail": { height: 4, color: "#ccc" },
-                  }}
+                  aria-labelledby="price-slider"
                 />
-                <div className="flex items-center space-x-2 mt-2 text-[11px] text-gray-600">
-                  <div className="flex-1 flex items-center border rounded p-2">
-                    <span className="mr-1">UGX</span>
-                    <input
-                      type="number"
-                      value={selectedPriceRange[0]}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (v >= minPrice && v <= selectedPriceRange[1]) {
-                          setSelectedPriceRange([v, selectedPriceRange[1]]);
-                          setSelectedPriceOption("custom");
-                        }
-                      }}
-                      className="w-full outline-none text-[11px]"
-                    />
-                  </div>
-                  <span>to</span>
-                  <div className="flex-1 flex items-center border rounded p-2">
-                    <span className="mr-1">UGX</span>
-                    <input
-                      type="number"
-                      value={selectedPriceRange[1]}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (v <= maxPrice && v >= selectedPriceRange[0]) {
-                          setSelectedPriceRange([selectedPriceRange[0], v]);
-                          setSelectedPriceOption("custom");
-                        }
-                      }}
-                      className="w-full outline-none text-[11px]"
-                    />
-                  </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>${selectedPriceRange[0]}</span>
+                  <span>${selectedPriceRange[1]}</span>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          {/* Size & Fit */}
-          <div>
-            <button
-              onClick={() => setOpenSize(!openSize)}
-              className="w-full flex items-center justify-between bg-blue-50 p-2 rounded text-[11px] text-gray-600"
-            >
-              Size & Fit {openSize ? <IoIosArrowUp /> : <IoIosArrowDown />}
-            </button>
-            {openSize && (
-              <div className="mt-2 ml-2 space-y-1 text-[10px] text-gray-600">
-                {dynamicSizeOptions.map((sz) => (
-                  <label key={sz} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox accent-[#f9622c] w-2.5 h-2.5"
-                      checked={
-                        sz.startsWith("All")
-                          ? selectedSizes.includes("All Sizes")
-                          : selectedSizes.includes(sz.split(" ")[0])
-                      }
-                      onChange={(e) => handleSizeChange(sz, e.target.checked)}
-                    />
-                    <span>{sz}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Rating */}
-          <div>
-            <button
-              onClick={() => setOpenRating(!openRating)}
-              className="w-full flex items-center justify-between bg-blue-50 p-2 rounded text-[11px] text-gray-600"
-            >
-              Rating {openRating ? <IoIosArrowUp /> : <IoIosArrowDown />}
-            </button>
-            {openRating && (
-              <div className="mt-2 ml-2 space-y-2 text-[11px] text-gray-600">
-                {ratingOptions.map(({ stars, count }) => (
-                  <label key={stars} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      name="rating"
-                      className="form-radio accent-[#f9622c] w-3 h-3"
-                      checked={selectedRating === stars}
-                      onChange={() => setSelectedRating(stars)}
-                    />
-                    <span className="flex items-center">
-                      {Array.from({ length: stars }).map((_, i) => (
-                        <FaStar key={i} size={11} color="#FFC107" />
-                      ))}{" "}
-                      & Above ({count})
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Apply Filters */}
+        {/* Size */}
+        <div className="mb-4">
           <button
-            onClick={handleApplyFilters}
-            className="w-full bg-[#f9622c] hover:bg-orange-600 text-white py-2 rounded text-[11px] font-semibold"
+            onClick={() => setOpenSize(!openSize)}
+            className="w-full flex justify-between items-center p-2 bg-gray-100 rounded"
           >
-            Apply
+            <span>Size</span>
+            {openSize ? <IoIosArrowUp /> : <IoIosArrowDown />}
           </button>
+          {openSize && (
+            <div className="mt-2 space-y-2">
+              {uniqueSizes.map((size) => (
+                <label key={size} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedSizes.includes(size)}
+                    onChange={() => handleSizeChange(size)}
+                    className="mr-2"
+                  />
+                  {size}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Rating */}
+        <div className="mb-4">
+          <button
+            onClick={() => setOpenRating(!openRating)}
+            className="w-full flex justify-between items-center p-2 bg-gray-100 rounded"
+          >
+            <span>Rating</span>
+            {openRating ? <IoIosArrowUp /> : <IoIosArrowDown />}
+          </button>
+          {openRating && (
+            <div className="mt-2 space-y-2">
+              {ratingOptions.map((option) => (
+                <label key={option.stars} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={selectedRating === option.stars}
+                    onChange={() => handleRatingChange(option.stars)}
+                    className="mr-2"
+                  />
+                  <div className="flex items-center">
+                    {[...Array(option.stars)].map((_, i) => (
+                      <FaStar key={i} className="text-yellow-500" />
+                    ))}
+                    <span className="ml-2 text-sm text-gray-600">({option.count})</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Right Side (Products display area) */}
-      <div className="w-3/4 p-4">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          {fetchError ? (
-            <div className="p-4 text-center text-red-600">{fetchError}</div>
-          ) : loadingProducts ? (
-            <Loader />
-          ) : (
-            <ProductSection
-              products={allProducts}
-              filters={appliedFilters}
-              loading={false}
-            />
-          )}
-        </div>
+      {/* Products */}
+      <div className="flex-1">
+        {loadingProducts ? (
+          <Loader />
+        ) : errorProducts ? (
+          <div className="text-red-500">Error loading products: {errorProducts}</div>
+        ) : (
+          <ProductSection products={filteredProducts} />
+        )}
       </div>
     </div>
   );

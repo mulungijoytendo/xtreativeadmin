@@ -40,33 +40,32 @@ const SetNewPassword = ({ resetToken, onCancel }) => {
 
     try {
       const res = await fetch(
-        "https://api-xtreative.onrender.com/accounts/auth/admin-password-reset/",
+        `${API_BASE_URL}/accounts/auth/admin-password-reset/`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resetToken}`,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         }
       );
-      const data = await res.json();
 
       if (res.ok) {
-        setShowLoader(true);
         setToastMessage("Password reset successful!");
         setToastType("success");
         setToastVisible(true);
-        resetForm();
-        setTimeout(() => navigate("/"), 3500);
+        setShowLoader(true);
+        setTimeout(() => {
+          setShowLoader(false);
+          navigate("/login");
+        }, 2000);
       } else {
-        const errMsg = data.detail || data.error || "Error resetting password.";
-        setToastMessage(errMsg);
+        const data = await res.json();
+        setToastMessage(data.detail || "Failed to reset password.");
         setToastType("error");
         setToastVisible(true);
       }
-    } catch {
-      setToastMessage("Network error. Please try again.");
+    } catch (err) {
+      console.error(err);
+      setToastMessage("An error occurred. Please try again.");
       setToastType("error");
       setToastVisible(true);
     } finally {
@@ -74,108 +73,136 @@ const SetNewPassword = ({ resetToken, onCancel }) => {
     }
   };
 
-  if (showLoader) {
-    return <Loader />;
-  }
-
   return (
-    <div className="reset-card">
-      <h2 className="title">Set New Password</h2>
-      <p className="description text-[11px] mb-6">Enter your new password below.</p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="flex items-center justify-center mb-4">
+          <IoCheckmarkDoneCircle className="h-12 w-12 text-green-500" />
+        </div>
+        <h2 className="text-xl font-semibold text-center mb-2">Set New Password</h2>
+        <p className="text-sm text-gray-600 text-center mb-6">
+          Please enter your new password.
+        </p>
 
-      <Formik
-        initialValues={{ newPassword: "", confirmPassword: "" }}
-        validationSchema={validationSchema}
-        onSubmit={handleSubmit}
-      >
-        {({
-          values,
-          errors,
-          touched,
-          handleChange,
-          handleBlur,
-          handleSubmit,
-          isSubmitting,
-        }) => (
-          <form onSubmit={handleSubmit}>
-            {/* New Password */}
-            <div className="form-group relative">
-              <label className="block text-sm font-medium mb-1">New Password</label>
-              <input
-                type={showNew ? "text" : "password"}
-                name="newPassword"
-                placeholder="••••••••"
-                value={values.newPassword}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className="input pr-10"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNew(!showNew)}
-                className="absolute top-9 right-3"
-                tabIndex={-1}
-              >
-                {showNew ? <IoEyeOff size={20} /> : <IoEye size={20} />}
-              </button>
-              {touched.newPassword && errors.newPassword && (
-                <p className="message error">{errors.newPassword}</p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div className="form-group relative">
-              <label className="block text-sm font-medium mb-1">Confirm Password</label>
-              <input
-                type={showConfirm ? "text" : "password"}
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={values.confirmPassword}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className="input pr-10"
-                disabled={isSubmitting}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute top-9 right-3"
-                tabIndex={-1}
-              >
-                {showConfirm ? <IoEyeOff size={20} /> : <IoEye size={20} />}
-              </button>
-              {touched.confirmPassword && errors.confirmPassword && (
-                <p className="message error">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            <button type="submit" className="button mb-2" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Reset Password"}
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="text-[11px] underline"
-              disabled={isSubmitting}
-            >
-              Back
-            </button>
-          </form>
-        )}
-      </Formik>
-
-      {/* Toast Notification */}
-      {toastVisible && (
-        <div
-          className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded flex items-center space-x-2 shadow-lg text-white text-[11px] ${
-            toastType === "success" ? "bg-green-500" : "bg-red-500"
-          }`}
+        <Formik
+          initialValues={{ newPassword: "", confirmPassword: "" }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
         >
-          <IoCheckmarkDoneCircle size={20} />
-          <span>{toastMessage}</span>
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            isSubmitting,
+          }) => (
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label
+                  htmlFor="newPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    id="newPassword"
+                    name="newPassword"
+                    value={values.newPassword}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.newPassword && touched.newPassword ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowNew(!showNew)}
+                  >
+                    {showNew ? (
+                      <IoEyeOff className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <IoEye className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+                {errors.newPassword && touched.newPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.newPassword}</p>
+                )}
+              </div>
+
+              <div className="mb-6">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={values.confirmPassword}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.confirmPassword && touched.confirmPassword ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Confirm new password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                  >
+                    {showConfirm ? (
+                      <IoEyeOff className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <IoEye className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && touched.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Setting..." : "Set Password"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </Formik>
+      </div>
+
+      {/* Toast */}
+      {toastVisible && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg z-50">
+          <p>{toastMessage}</p>
         </div>
       )}
+
+      {/* Loader */}
+      {showLoader && <Loader />}
     </div>
   );
 };

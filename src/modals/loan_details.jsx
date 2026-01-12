@@ -86,7 +86,7 @@ const LoansModal = ({ isOpen, onClose, loan }) => {
     }
 
     try {
-      const response = await fetch(`https://api-xtreative.onrender.com/loans/${applicationId}/approve/`, {
+      const response = await fetch(`${API_BASE_URL}/loans/${applicationId}/approve/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

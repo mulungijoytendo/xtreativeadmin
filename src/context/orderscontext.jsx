@@ -16,7 +16,7 @@ export const OrdersProvider = ({ children }) => {
         if (!token) {
           throw new Error("No auth token found. Please log in.");
         }
-        const res = await fetch("https://api-xtreative.onrender.com/orders/list/", {
+        const res = await fetch(`${API_BASE_URL}/orders/list/`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,

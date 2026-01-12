@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FaEye, FaCar } from "react-icons/fa";
 import { UserContext } from "../context/usercontext";
 import { OrdersContext } from "../context/orderscontext";
+import { API_BASE_URL } from "../config";
 
 // Map statuses to bg/text colors using yellow ↔ orange ↔ green blends
 const getOrderStatusClasses = (status) => {
@@ -41,196 +42,263 @@ const getDuration = (isoDateString) => {
   const then = new Date(isoDateString).getTime();
   const now = new Date("2025-09-22").getTime(); // Fixed current date
   const diffMs = now - then;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const msPerHour = 1000 * 60 * 60;
+  if (diffDays > 0) return `${diffDays}d ${diffHours}h`;
+  if (diffHours > 0) return `${diffHours}h ${diffMinutes}m`;
+  return `${diffMinutes}m`;
+};
 
-  const days = Math.floor(diffMs / msPerDay);
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""}`;
-  const hours = Math.floor(diffMs / msPerHour);
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""}`;
-  return "Just now";
+// Format currency
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(amount);
 };
 
 // Base API endpoint pattern
-const API_STATUS_ENDPOINT = "https://api-xtreative.onrender.com/orders/{order_id}/status/";
+const API_STATUS_ENDPOINT = API_BASE_URL + "/orders/{order_id}/status/";
 
-const OrderTable = () => {
-  const { orders, loading, error, refreshOrders } = useContext(OrdersContext);
-  const { getUsernameById, loading: loadingUsers, error: userError } = useContext(UserContext);
+const OrderListTable = () => {
+  const { orders, loadingOrders, errorOrders } = useContext(OrdersContext);
+  const { users, loadingUsers, errorUsers } = useContext(UserContext);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 15;
-  const totalPages = Math.ceil(orders.length / pageSize);
-  const OFFSET = 1000;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState("desc");
 
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return orders.slice(start, start + pageSize);
-  }, [orders, currentPage]);
+  // Memoized user lookup
+  const userLookup = useMemo(() => {
+    if (!users) return {};
+    return users.reduce((acc, user) => {
+      acc[user.id] = user;
+      return acc;
+    }, {});
+  }, [users]);
 
-  // Synchronize status with API
-  useEffect(() => {
-    const syncStatuses = async () => {
-      const token = localStorage.getItem("authToken");
-      if (!token) return;
+  // Memoized filtered and sorted orders
+  const filteredOrders = useMemo(() => {
+    let filtered = orders || [];
 
-      for (const order of orders) {
-        const origId = order.id;
-        const currentStepStatus = ["paid", "confirmed", "processing", "delivering", "delivered"][
-          Math.min(order.currentStep || 0, 4)
-        ];
-
-        if (order.status.toLowerCase() !== currentStepStatus) {
-          const endpoint = API_STATUS_ENDPOINT.replace("{order_id}", origId);
-          try {
-            const res = await fetch(endpoint, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ status: currentStepStatus }),
-            });
-            if (res.ok) {
-              refreshOrders?.();
-            } else {
-              console.error("Failed to update status for order", origId);
-            }
-          } catch (e) {
-            console.error("Network error", e);
-          }
-        }
-      }
-    };
-    syncStatuses();
-  }, [orders, refreshOrders]);
-
-  if (loading || loadingUsers)
-    return (
-      <div className="text-center p-4 text-gray-600 text-[11px]">
-        Loading orders…
-      </div>
-    );
-  if (error)
-    return (
-      <div className="text-center p-4 text-red-600 text-[11px]">
-        Error: {error}
-      </div>
-    );
-  if (userError)
-    return (
-      <div className="text-center p-4 text-red-600 text-[11px]">
-        Error: {userError}
-      </div>
-    );
-
-  const headers = [
-    "Order ID",
-    "Date Created",
-    "Customer",
-    "Duration",
-    "Total",
-    "Items",
-    "Order Status",
-    "Action",
-  ];
-
-  const renderRows = () =>
-    paginated.map((order) => {
-      const cleanId = `ORD${order.id + OFFSET}`;
-      const date = new Date(order.created_at).toLocaleDateString("en-GB");
-      const duration = getDuration(order.created_at);
-      const total = `UGX ${Number(order.total_price).toLocaleString()}`;
-      const username = getUsernameById(order.customer);
-      const rawStatus = order.status.toLowerCase();
-      const statusClasses = getOrderStatusClasses(order.status);
-
-      const statusContent =
-        rawStatus === "sent to warehouse" ? (
-          <>
-            <FaCar className="inline-block text-yellow-700 mr-1" />
-            Sent to WH
-          </>
-        ) : (
-          capitalize(rawStatus)
-        );
-
-      return (
-        <tr
-          key={order.id}
-          className="border-t hover:bg-gray-50 text-[10px] text-gray-700"
-        >
-          <td className="px-4 py-2 border-r border-gray-200">{cleanId}</td>
-          <td className="px-4 py-2 border-r border-gray-200">{date}</td>
-          <td className="px-4 py-2 border-r border-gray-200">{username}</td>
-          <td className="px-4 py-2 border-r border-gray-200">{duration}</td>
-          <td className="px-4 py-2 border-r border-gray-200">{total}</td>
-          <td className="px-4 py-2 border-r border-gray-200">
-            {order.items.length}
-          </td>
-          <td className="px-4 py-2 border-r border-gray-200">
-            <span
-              className={`inline-block px-2 py-1 rounded-full text-[9px] ${statusClasses}`}
-            >
-              {statusContent}
-            </span>
-          </td>
-          <td className="px-4 py-2">
-            <Link
-              to={`/order/${order.id + OFFSET}`}
-              className="px-2 py-1 hover:underline text-gray-600"
-            >
-              <FaEye className="inline-block" />
-            </Link>
-          </td>
-        </tr>
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (order) =>
+          order.id.toString().includes(term) ||
+          order.customer_name.toLowerCase().includes(term) ||
+          order.customer_email.toLowerCase().includes(term) ||
+          order.customer_phone.toLowerCase().includes(term) ||
+          order.product_name.toLowerCase().includes(term) ||
+          order.product_category.toLowerCase().includes(term)
       );
+    }
+
+    // Status filter
+    if (statusFilter !== "All") {
+      filtered = filtered.filter((order) => order.status.toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      if (sortBy === "date") {
+        aVal = new Date(a.created_at).getTime();
+        bVal = new Date(b.created_at).getTime();
+      } else if (sortBy === "amount") {
+        aVal = a.total_amount;
+        bVal = b.total_amount;
+      } else if (sortBy === "customer") {
+        aVal = a.customer_name.toLowerCase();
+        bVal = b.customer_name.toLowerCase();
+      } else if (sortBy === "status") {
+        aVal = a.status.toLowerCase();
+        bVal = b.status.toLowerCase();
+      } else {
+        aVal = a.id;
+        bVal = b.id;
+      }
+
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
     });
 
+    return filtered;
+  }, [orders, searchTerm, statusFilter, sortBy, sortOrder]);
+
+  // Status options for filter dropdown
+  const statusOptions = useMemo(() => {
+    const statuses = new Set(orders?.map((o) => o.status.toLowerCase()) || []);
+    return ["All", ...Array.from(statuses).sort()];
+  }, [orders]);
+
+  // Handlers
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  const handleStatusChange = (e) => setStatusFilter(e.target.value);
+  const handleSortChange = (e) => setSortBy(e.target.value);
+  const toggleSortOrder = () => setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+
+  // Loading and error states
+  if (loadingOrders || loadingUsers) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (errorOrders || errorUsers) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        Error loading data: {errorOrders || errorUsers}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col">
-      <div className="overflow-x-auto bg-white rounded">
-        <table className="min-w-full table-auto border-collapse">
-          <thead className="bg-gray-50 text-gray-700 text-[11px]">
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Filters and Controls */}
+      <div className="p-4 border-b flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search orders (ID, customer, product, category, phone)..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex gap-4 items-center">
+          <select
+            value={statusFilter}
+            onChange={handleStatusChange}
+            className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status === "All" ? "All Statuses" : capitalize(status)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={handleSortChange}
+            className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="date">Sort by Date</option>
+            <option value="amount">Sort by Amount</option>
+            <option value="customer">Sort by Customer</option>
+            <option value="status">Sort by Status</option>
+            <option value="id">Sort by ID</option>
+          </select>
+          <button
+            onClick={toggleSortOrder}
+            className="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+          >
+            {sortOrder === "asc" ? "▲ Asc" : "▼ Desc"}
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
             <tr>
-              {headers.map((h, i) => (
-                <th
-                  key={h}
-                  className={`px-4 py-2 text-left font-medium ${
-                    i < headers.length - 1 ? "border-r border-gray-200" : ""
-                  }`}
-                >
-                  {h}
-                </th>
-              ))}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order ID
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Product
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Created
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>{renderRows()}</tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredOrders.map((order) => (
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  #{order.id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div>
+                    <div className="font-medium">{order.customer_name}</div>
+                    <div className="text-xs text-gray-400">{order.customer_email}</div>
+                    <div className="text-xs text-gray-400">{order.customer_phone}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div>
+                    <div className="font-medium">{order.product_name}</div>
+                    <div className="text-xs text-gray-400">{order.product_category}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {formatCurrency(order.total_amount)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getOrderStatusClasses(order.status)}`}>
+                    {capitalize(order.status)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div>{new Date(order.created_at).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-400">{getDuration(order.created_at)}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                  <Link
+                    to={`/order-order-details/${order.id}`}
+                    className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                  >
+                    <FaEye />
+                    View
+                  </Link>
+                  {order.status.toLowerCase() !== "delivered" && (
+                    <Link
+                      to={`/order-order-details/${order.id}`}
+                      className="text-green-600 hover:text-green-900 flex items-center gap-1"
+                    >
+                      <FaCar />
+                      Track
+                    </Link>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
 
-      <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center justify-center space-x-4 text-[11px]">
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-          className="p-1 disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span>
-          {currentPage} of {totalPages}
-        </span>
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-          className="p-1 disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
+      {/* Empty state */}
+      {filteredOrders.length === 0 && (
+        <div className="p-4 text-center text-gray-500">
+          No orders found matching your criteria.
+        </div>
+      )}
     </div>
   );
 };
 
-export default OrderTable;
+export default OrderListTable;

@@ -1,5 +1,6 @@
 // src/api.js
-const API_BASE_URL = "https://api-xtreative.onrender.com";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://api-xtreative.onrender.com";
 
 // Generic authenticated fetch helper
 export const authFetch = async (path, options = {}) => {
@@ -41,24 +42,19 @@ export const authFetch = async (path, options = {}) => {
 ============================ */
 
 // Transactions
-export const getTransactions = () =>
-  authFetch("/payments/transactions/");
+export const getTransactions = () => authFetch("/payments/transactions/");
 
 // Admin payouts
-export const getAdminPayouts = () =>
-  authFetch("/payouts/admin/");
+export const getAdminPayouts = () => authFetch("/payouts/admin/");
 
 // Loans
-export const getLoansList = () =>
-  authFetch("/loans/");
+export const getLoansList = () => authFetch("/loans/");
 
 // Vendors
-export const getVendorsList = () =>
-  authFetch("/vendors/");
+export const getVendorsList = () => authFetch("/vendors/");
 
 // Customers
-export const getCustomersList = () =>
-  authFetch("/customers/");
+export const getCustomersList = () => authFetch("/customers/");
 
 // Business Wallet Balance (with PIN verification)
 export const getBusinessWalletBalance = ({ pin }) =>
@@ -68,7 +64,6 @@ export const getBusinessWalletBalance = ({ pin }) =>
   });
 
 // Product Stock/Inventory
-export const getProductStock = () =>
-  authFetch("/products/stock/");
+export const getProductStock = () => authFetch("/products/stock/");
 
 export { API_BASE_URL };

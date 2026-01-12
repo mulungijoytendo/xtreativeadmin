@@ -14,7 +14,7 @@ export const UserProvider = ({ children }) => {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) throw new Error("No auth token found. Please log in.");
-        const res = await fetch("https://api-xtreative.onrender.com/users/list/", {
+        const res = await fetch(`${API_BASE_URL}/users/list/`, {
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error(`Error fetching users: ${res.statusText}`);
@@ -42,7 +42,7 @@ export const UserProvider = ({ children }) => {
       const token = localStorage.getItem("authToken");
       // 1) Create conversation as admin
       const convRes = await fetch(
-        `https://api-xtreative.onrender.com/chatsapp/conversations/admin-user/`,
+        `${API_BASE_URL}/chatsapp/conversations/admin-user/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -55,7 +55,7 @@ export const UserProvider = ({ children }) => {
 
       // 2) Send message to conversation
       const msgRes = await fetch(
-        `https://api-xtreative.onrender.com/chatsapp/conversations/${convId}/messages/create/`,
+        `${API_BASE_URL}/chatsapp/conversations/${convId}/messages/create/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

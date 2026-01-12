@@ -29,7 +29,7 @@ export default function ProductReports({ disableReviewsPagination = false, isGen
   useEffect(() => {
     if (!selectedVendorId) return setVendor(null);
     let isMounted = true;
-    fetch(`https://api-xtreative.onrender.com/vendors/${selectedVendorId}/details/`)
+    fetch(`${API_BASE_URL}/vendors/${selectedVendorId}/details/`)
       .then(res => { if (!res.ok) throw Error(); return res.json(); })
       .then(data => isMounted && setVendor(data))
       .catch(() => isMounted && setVendorError("Unable to load vendor details"));

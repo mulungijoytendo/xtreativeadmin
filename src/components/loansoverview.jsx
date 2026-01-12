@@ -39,7 +39,7 @@ export default function LoanOverview() {
     const fetchTotalSales = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('https://api-xtreative.onrender.com/sales/analytics', {
+        const response = await fetch(`${API_BASE_URL}/sales/analytics`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,

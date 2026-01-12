@@ -66,7 +66,7 @@ export default function CustomersList() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Base API URL for activation/deactivation endpoints
-  const API_BASE_URL = "https://api-xtreative.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-xtreative.onrender.com';
 
   // Fetch logic extracted so we can re-use on Refresh
   const fetchCustomers = () => {

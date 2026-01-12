@@ -20,7 +20,7 @@ export const LoansProvider = ({ children }) => {
         }
 
         // Fetch loans
-        const loansRes = await fetch('https://api-xtreative.onrender.com/loan_app/loans/list/', {
+        const loansRes = await fetch(`${API_BASE_URL}/loan_app/loans/list/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (loansRes.ok) {
@@ -31,7 +31,7 @@ export const LoansProvider = ({ children }) => {
         }
 
         // Fetch vendors
-        const vendorsRes = await fetch('https://api-xtreative.onrender.com/vendors/list/', {
+        const vendorsRes = await fetch(`${API_BASE_URL}/vendors/list/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (vendorsRes.ok) {
@@ -58,7 +58,7 @@ export const LoansProvider = ({ children }) => {
     approveLoan: async (id) => {
       try {
         const token = localStorage.getItem('authToken');
-        const res = await fetch(`https://api-xtreative.onrender.com/${id}/approve/`, {
+        const res = await fetch(`${API_BASE_URL}/${id}/approve/`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -74,7 +74,7 @@ export const LoansProvider = ({ children }) => {
     rejectLoan: async (id, reason) => {
       try {
         const token = localStorage.getItem('authToken');
-        const res = await fetch(`https://api-xtreative.onrender.com/loan_app/${id}/reject/`, {
+        const res = await fetch(`${API_BASE_URL}/loan_app/${id}/reject/`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify({ rejection_reason: reason }),

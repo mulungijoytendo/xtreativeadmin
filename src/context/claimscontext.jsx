@@ -71,7 +71,7 @@ export const ClaimsProvider = ({ children }) => {
         }, {});
 
         // Fetch products to get image URLs
-        const productsResponse = await fetch("https://api-xtreative.onrender.com/products/listing/", {
+        const productsResponse = await fetch(`${API_BASE_URL}/products/listing/`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${authToken}`,
@@ -91,7 +91,7 @@ export const ClaimsProvider = ({ children }) => {
         }, {});
 
         // Fetch customers
-        const customersResponse = await fetch("https://api-xtreative.onrender.com/customers/list/", {
+        const customersResponse = await fetch(`${API_BASE_URL}/customers/list/`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${authToken}`,
@@ -111,7 +111,7 @@ export const ClaimsProvider = ({ children }) => {
         }, {});
 
         // Fetch claims
-        const claimsResponse = await fetch("https://api-xtreative.onrender.com/returns/list/", {
+        const claimsResponse = await fetch(`${API_BASE_URL}/returns/list/`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${authToken}`,

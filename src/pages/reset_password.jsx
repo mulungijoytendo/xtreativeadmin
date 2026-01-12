@@ -34,128 +34,154 @@ const ResetPassword = () => {
   const handleReset = async (values, { setSubmitting }) => {
     try {
       const res = await fetch(
-        "https://api-xtreative.onrender.com/accounts/auth/password-reset/request/",
+        `${API_BASE_URL}/accounts/auth/password-reset/request/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: values.email }),
         }
       );
-      const data = await res.json();
+
       if (res.ok) {
-        setMessage(
-          "If an account with that email exists, you’ll receive an OTP shortly."
-        );
-        setError("");
+        setMessage("OTP sent to your email.");
         setOtpStep(true);
+        setError("");
       } else {
-        setError(data.detail || "Something went wrong.");
-        setMessage("");
+        const data = await res.json();
+        setError(data.detail || "Failed to send OTP.");
       }
-    } catch {
-      setError("Network error.");
-      setMessage("");
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 2) OTP succeeded → store token and show new password form
+  // 2) Verify OTP and get token
   const handleOtpSuccess = (token) => {
     setResetToken(token);
     sessionStorage.setItem("resetToken", token);
-    setOtpStep(false);
     setShowSetNew(true);
   };
 
-  // Cancel in SetNewPassword → clear token and go back
-  const handleCancel = () => {
-    sessionStorage.removeItem("resetToken");
-    setResetToken("");
-    setShowSetNew(false);
-    setOtpStep(true);
+  // 3) Set new password
+  const handleSetNewPassword = async (values, { setSubmitting }) => {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/accounts/auth/admin-password-reset/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: resetToken,
+            new_password: values.password,
+            confirm_password: values.confirmPassword,
+          }),
+        }
+      );
+
+      if (res.ok) {
+        setMessage("Password reset successful. You can now log in.");
+        setError("");
+        // Clear token from sessionStorage
+        sessionStorage.removeItem("resetToken");
+        // Redirect to login after a short delay
+        setTimeout(() => navigate("/login"), 2000);
+      } else {
+        const data = await res.json();
+        setError(data.detail || "Failed to reset password.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="reset-password-screen font-poppins flex min-h-screen">
-      <style>{`
-        .reset-password-screen { background:#f9fafb; }
-        .left-panel, .right-panel { flex:1; display:flex; align-items:center; justify-content:center; }
-        .left-panel { padding:4rem; }
-        .reset-card { max-width:500px;width:100%;background:#f9fafb;padding:2rem;border-radius:8px;text-align:center; }
-        .icon-lock { margin:0 auto 1rem;display:block;color:#f9622c; }
-        .title { font-size:1.2rem;font-weight:700;color:#111827;margin-bottom:.5rem; }
-        .description { font-size:.875rem;color:#6b7280;margin-bottom:1.5rem; }
-        .form-group { margin-bottom:1.5rem;text-align:left; }
-        .input { width:100%;padding:.75rem 1rem;border:1px solid #d1d5db;border-radius:4px;font-size:.875rem; }
-        .input:focus { outline:none;border-color:#280300; }
-        .button { width:100%;background:#f9622c;color:#fff;padding:.75rem;border:none;border-radius:4px;font-size:.875rem;font-weight:600;cursor:pointer; }
-        .button:hover { background:#d94a1a; }
-        .message { font-size:.7rem;margin-top:1rem; }
-        .error { color:#dc2626; }
-        .success { color:#16a34a; }
-        .back-link { margin-top:1.5rem;font-size:.875rem;color:#6b7280; }
-        .back-link span { color:#111827;cursor:pointer;font-weight:600; }
-        .right-panel img { width:100%;height:auto;object-fit:contain;border-radius:0 8px 8px 0; }
-      `}</style>
-
-      <div className="left-panel">
-        {showSetNew ? (
-          // Step 3: set new password with stored token
-          <SetNewPassword resetToken={resetToken} onCancel={handleCancel} />
-        ) : otpStep ? (
-          // Step 2: OTP input
-          <OTPVerification
-            isOpen={true}
-            onClose={() => setOtpStep(false)}
-            onSuccess={handleOtpSuccess}
-          />
-        ) : (
-          // Step 1: request OTP form
-          <div className="reset-card">
-            <IoLockClosed size={48} className="icon-lock" />
-            <h1 className="title">Reset Password</h1>
-            <p className="description">
-              Enter your email to receive an OTP to reset your password.
-            </p>
-            <Formik
-              initialValues={{ email: "" }}
-              validationSchema={validationSchema}
-              onSubmit={handleReset}
-            >
-              {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
-                <form onSubmit={handleSubmit}>
-                  <div className="form-group">
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="Enter your email"
-                      className="input"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.email}
-                    />
-                    {touched.email && errors.email && (
-                      <div className="message error">{errors.email}</div>
-                    )}
-                  </div>
-                  <button type="submit" className="button" disabled={isSubmitting}>
-                    {isSubmitting ? "Sending..." : "Send OTP"}
-                  </button>
-                  {message && <div className="message success">{message}</div>}
-                  {error && <div className="message error">{error}</div>}
-                  <div className="back-link">
-                    Back to <span onClick={() => navigate("/")}>Sign In</span>
-                  </div>
-                </form>
-              )}
-            </Formik>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div className="flex justify-center mb-6">
+          <img src={resetImage} alt="Reset Password" className="h-16 w-16" />
+        </div>
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Reset Password
+        </h2>
+        {message && (
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
+            {message}
           </div>
         )}
-      </div>
-
-      <div className="right-panel">
-        <img src={resetImage} alt="Reset Password Illustration" loading="lazy" />
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        {!otpStep && !showSetNew && (
+          <Formik
+            initialValues={{ email: "" }}
+            validationSchema={validationSchema}
+            onSubmit={handleReset}
+          >
+            {({
+              values,
+              errors,
+              touched,
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              isSubmitting,
+            }) => (
+              <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={values.email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.email && touched.email ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter your email"
+                  />
+                  {errors.email && touched.email && (
+                    <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Sending..." : "Send OTP"}
+                </button>
+              </form>
+            )}
+          </Formik>
+        )}
+        {otpStep && !showSetNew && (
+          <OTPVerification onSuccess={handleOtpSuccess} />
+        )}
+        {showSetNew && (
+          <SetNewPassword
+            token={resetToken}
+            onSuccess={() => {
+              setMessage("Password reset successful. You can now log in.");
+              setTimeout(() => navigate("/login"), 2000);
+            }}
+            onError={(err) => setError(err)}
+          />
+        )}
       </div>
     </div>
   );

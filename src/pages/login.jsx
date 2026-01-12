@@ -4,8 +4,9 @@ import { Formik } from "formik";
 import * as Yup from "yup";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import logo from "../assets/logo.png";
+import { API_BASE_URL } from "../config";
 
-const API_URL = "https://api-xtreative.onrender.com/accounts/admin/login/";
+const API_URL = API_BASE_URL + "/accounts/admin/login/";
 
 const LoginScreen = () => {
   const navigate = useNavigate();
@@ -39,302 +40,123 @@ const LoginScreen = () => {
           localStorage.setItem("refreshToken", data.refresh);
         }
 
-        setLoginError("");
         setLoginSuccess(true);
-
-        // Redirect to admin dashboard
+        setLoginError("");
         setTimeout(() => {
           navigate("/admin-dashboard");
-        }, 2000);
+        }, 1000);
       } else {
-        setLoginError(
-          data.message ||
-            data.detail ||
-            "Invalid credentials. Please try again."
-        );
-        setLoginSuccess(false);
+        setLoginError(data.detail || "Login failed. Please check your credentials.");
       }
     } catch (error) {
       console.error("Login error:", error);
-      setLoginError("Something went wrong. Please try again later.");
-      setLoginSuccess(false);
+      setLoginError("An error occurred. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="login-screen font-poppins">
-      <style>{`
-        /* Overall layout */
-        .login-screen {
-          min-height: 100vh;
-          background-color: #fff;
-          display: flex;
-          flex-direction: column;
-        }
-        /* Container and card styling */
-        .login-container {
-          flex-grow: 1;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 16px;
-        }
-        .login-card {
-          width: 100%;
-          max-width: 450px;
-          background-color: #fff;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          padding: 40px;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          position: relative;
-        }
-        .login-card-title {
-          text-align: center;
-          font-size: 2rem;
-          font-weight: bold;
-          margin-bottom: 32px;
-          color: #280300;
-        }
-        /* Form styling */
-        .login-form {
-          display: flex;
-          flex-direction: column;
-        }
-        .form-group {
-          position: relative;
-          margin-bottom: 24px;
-        }
-        /* Input and floating label styling */
-        .login-input {
-          width: 100%;
-          padding: 12px 8px;
-          font-size: 14px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          background-color: transparent;
-          outline: none;
-          transition: border-color 0.2s ease;
-        }
-        .login-input:focus {
-          border-color: #6B46C1;
-        }
-        .login-label {
-          position: absolute;
-          left: 12px;
-          top: 12px;
-          font-size: 14px;
-          color: #999;
-          background-color: transparent;
-          padding: 0 4px;
-          transition: all 0.2s ease;
-          pointer-events: none;
-        }
-        .login-input:focus + .login-label,
-        .login-input:not(:placeholder-shown) + .login-label {
-          top: -10px;
-          left: 8px;
-          font-size: 12px;
-          color: #6B46C1;
-          background-color: #fff;
-        }
-        /* Error message styling */
-        .login-error {
-          font-size: 12px;
-          color: #F9622C;
-          margin-top: 4px;
-        }
-        /* Forgot password styling */
-        .forgot-password-container {
-          text-align: right;
-          margin-bottom: 24px;
-        }
-        .forgot-password {
-          font-size: 12px;
-          color: #1976D2;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0;
-        }
-        .forgot-password:hover {
-          text-decoration: underline;
-        }
-        /* Sign in button styling */
-        .login-button {
-          width: 100%;
-          background-color: #280300;
-          color: #fff;
-          padding: 12px;
-          border: none;
-          border-radius: 4px;
-          font-size: 16px;
-          cursor: pointer;
-          transition: background-color 0.3s ease;
-        }
-        .login-button:hover {
-          background-color: #1e0200;
-        }
-        .login-button:disabled {
-          background-color: #999;
-          cursor: not-allowed;
-        }
-        .error-message,
-        .success-message {
-          margin-top: 16px;
-          padding: 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          text-align: center;
-        }
-        .error-message {
-          background-color: #ffe6e6;
-          color: #d9534f;
-        }
-        .success-message {
-          background-color: #e6ffe6;
-          color: #28a745;
-        }
-        .loader {
-          margin: 0 auto 16px;
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #280300;
-          border-radius: 50%;
-          width: 30px;
-          height: 30px;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .login-footer {
-          margin-top: 32px;
-          display: flex;
-          justify-content: center;
-        }
-        .login-logo {
-          width: 100px;
-          height: 60px;
-          object-fit: contain;
-        }
-        .password-toggle-icon {
-          position: absolute;
-          top: 50%;
-          right: 12px;
-          transform: translateY(-50%);
-          cursor: pointer;
-          color: #999;
-        }
-      `}</style>
-
-      <div className="login-container">
-        <div className="login-card">
-          <h2 className="login-card-title">Sign In</h2>
-          <Formik
-            initialValues={{ email: "", password: "" }}
-            validationSchema={validationSchema}
-            onSubmit={handleLogin}
-          >
-            {({
-              handleChange,
-              handleBlur,
-              handleSubmit,
-              values,
-              errors,
-              touched,
-              isSubmitting,
-            }) => (
-              <form onSubmit={handleSubmit} className="login-form">
-                {isSubmitting && <div className="loader" />}
-
-                <div className="form-group">
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    value={values.email}
-                    className="login-input"
-                    placeholder=" "
-                  />
-                  <label htmlFor="email" className="login-label">
-                    Email
-                  </label>
-                  {touched.email && errors.email && (
-                    <p className="login-error">{errors.email}</p>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    id="password"
-                    name="password"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    value={values.password}
-                    className="login-input"
-                    placeholder=" "
-                  />
-                  <label htmlFor="password" className="login-label">
-                    Password
-                  </label>
-                  <span
-                    className="password-toggle-icon"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                  >
-                    {showPassword ? (
-                      <IoEyeOffOutline size={20} />
-                    ) : (
-                      <IoEyeOutline size={20} />
-                    )}
-                  </span>
-                  {touched.password && errors.password && (
-                    <p className="login-error">{errors.password}</p>
-                  )}
-                </div>
-
-                <div className="forgot-password-container">
-                  <button
-                    type="button"
-                    className="forgot-password"
-                    onClick={() => {
-                      sessionStorage.removeItem("resetToken");
-                      navigate("/reset_password");
-                    }}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  className="login-button"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Signing In..." : "Sign In"}
-                </button>
-
-                {loginError && (
-                  <div className="error-message">{loginError}</div>
-                )}
-                {loginSuccess && (
-                  <div className="success-message">
-                    Login successful! Redirecting...
-                  </div>
-                )}
-              </form>
-            )}
-          </Formik>
-
-          <div className="login-footer">
-            <img src={logo} alt="Logo" className="login-logo" />
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div className="flex justify-center mb-6">
+          <img src={logo} alt="Logo" className="h-16 w-16" />
         </div>
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Admin Login
+        </h2>
+        {loginSuccess && (
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
+            Login successful! Redirecting...
+          </div>
+        )}
+        {loginError && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+            {loginError}
+          </div>
+        )}
+        <Formik
+          initialValues={{ email: "", password: "" }}
+          validationSchema={validationSchema}
+          onSubmit={handleLogin}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            isSubmitting,
+          }) => (
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.email && touched.email ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter your email"
+                />
+                {errors.email && touched.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                )}
+              </div>
+              <div className="mb-6 relative">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Password
+                </label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={values.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.password && touched.password ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <IoEyeOffOutline className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <IoEyeOutline className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+                {errors.password && touched.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              >
+                {isSubmitting ? "Logging in..." : "Login"}
+              </button>
+            </form>
+          )}
+        </Formik>
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ export default function DeleteCustomer({
 
     try {
       const response = await authFetch(
-        `https://api-xtreative.onrender.com/customers/${customer.id}/delete/`,
+        `${API_BASE_URL}/customers/${customer.id}/delete/`,
         {
           method: "DELETE",
         }

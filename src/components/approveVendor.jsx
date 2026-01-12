@@ -47,7 +47,7 @@ export default function ApproveVendor({
       setIsApproving(true);
 
       const response = await authFetch(
-        `https://api-xtreative.onrender.com/accounts/${vendor.id}/approve-vendor/`,
+        `${API_BASE_URL}/accounts/${vendor.id}/approve-vendor/`,
         {
           method: "POST",
           body: JSON.stringify({ status: "Approved" }),
@@ -80,7 +80,7 @@ export default function ApproveVendor({
       setIsrejecting(true);
 
       const response = await authFetch(
-        `https://api-xtreative.onrender.com/accounts/${vendor.id}/reject_vendor/`,
+        `${API_BASE_URL}/accounts/${vendor.id}/reject_vendor/`,
         {
           method: "POST",
           body: JSON.stringify({ status: "Rejected" }),

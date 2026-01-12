@@ -88,7 +88,7 @@ export default function OrderLeftSection() {
     const origId = parseInt(orderId, 10) - OFFSET;
     try {
       const res = await fetch(
-        `https://api-xtreative.onrender.com/orders/${origId}/status/`,
+        `${API_BASE_URL}/orders/${origId}/status/`,
         {
           method: "GET",
           headers: {
@@ -208,7 +208,7 @@ export default function OrderLeftSection() {
       const newStatus = steps[nextStep].status;
       try {
         const res = await fetch(
-          `https://api-xtreative.onrender.com/orders/${origId}/status/`,
+          `${API_BASE_URL}/orders/${origId}/status/`,
           {
             method: "PATCH",
             headers: {
@@ -264,7 +264,7 @@ export default function OrderLeftSection() {
     try {
       const origId = parseInt(orderId, 10) - OFFSET;
       const res = await fetch(
-        `https://api-xtreative.onrender.com/orders/${origId}/confirm-warehouse/`,
+        `${API_BASE_URL}/orders/${origId}/confirm-warehouse/`,
         {
           method: "POST",
           headers: {
@@ -298,7 +298,7 @@ export default function OrderLeftSection() {
     try {
       const origId = parseInt(orderId, 10) - OFFSET;
       const res = await fetch(
-        `https://api-xtreative.onrender.com/orders/${origId}/mark-sent/`,
+        `${API_BASE_URL}/orders/${origId}/mark-sent/`,
         {
           method: "POST",
           headers: {
